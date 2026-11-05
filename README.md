@@ -1,3 +1,13 @@
+---
+title: Facevplus Backend
+emoji: 👁️
+colorFrom: indigo
+colorTo: blue
+sdk: gradio
+app_file: app.py
+pinned: false
+---
+
 # FaceVPlus — Face & Voice Recognition Attendance System (v2.0)
 
 FaceVPlus is a multi-modal attendance management system engineered for modern classrooms. It provides automated student attendance tracking using face recognition (Dlib 128D descriptors) and voice recognition (Resemblyzer acoustic embeddings), backed by a hosted Supabase PostgreSQL database.
