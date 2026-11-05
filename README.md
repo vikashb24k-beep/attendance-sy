@@ -9,17 +9,17 @@ FaceVPlus is a multi-modal attendance management system engineered for modern cl
 ### Prerequisites
 
 Make sure you have installed on your computer:
-- **Python**: Version 3.10, 3.11, or 3.12
+- **Python**: Version 3.10, 3.11, or 3.12 (Python 3.11 recommended)
 - **Node.js**: Version 18.0 or higher (v20+ recommended)
 - **Git**: Installed on your system
-- **Supabase Account**: An active project with database credentials
+- **Supabase Account**: An active Supabase project with database credentials
 - **Webcam & Microphone**: For live biometric capture
 
 ---
 
 ### Phase 1: Clone the Repository
 
-Open your terminal or command prompt and run:
+Open your terminal or command prompt:
 
 ```bash
 git clone https://github.com/RamanKumar-Dev/Face-recognition-based-attendance-system.git
@@ -30,12 +30,10 @@ cd Face-recognition-based-attendance-system
 
 ### Phase 2: Backend Setup (FastAPI & Python)
 
-#### Step 1: Open terminal in the backend directory
-```bash
-cd backend
-```
+> **Important**: The backend package is structured as `backend.app`. Run commands from the **root directory** of the repository so Python resolves module paths correctly.
 
-#### Step 2: Create a Virtual Environment
+#### Step 1: Create a Virtual Environment
+
 ```bash
 # Windows
 python -m venv venv
@@ -44,9 +42,12 @@ python -m venv venv
 python3 -m venv venv
 ```
 
-#### Step 3: Activate the Virtual Environment
+#### Step 2: Activate the Virtual Environment
+
 ```bash
 # Windows (PowerShell)
+# If script execution is disabled, allow it for the current session first:
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\venv\Scripts\Activate.ps1
 
 # Windows (Command Prompt)
@@ -56,39 +57,70 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-#### Step 4: Install Dependencies
+#### Step 3: Install Backend Dependencies
+
+Make sure to install using `backend/requirements.txt`, which includes all biometric, audio, and token packages:
+
 ```bash
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 ```
 
-#### Step 5: Set Up Environment Variables
+> **Note for Windows users**: `backend/requirements.txt` includes `dlib-bin`, which avoids needing C++ build tools or CMake on Windows.
+
+#### Step 4: Configure Backend Environment Variables
+
 Create a `.env` file inside the `backend/` folder by copying the example template:
 
 ```bash
 # Windows (PowerShell)
-Copy-Item .env.example .env
+Copy-Item backend/.env.example backend/.env
 
 # Linux / macOS
-cp .env.example .env
+cp backend/.env.example backend/.env
 ```
 
-Open `.env` in any text editor and fill in your credentials:
+Open `backend/.env` in any text editor and fill in your values:
+
 ```ini
+# --- Supabase Database ---
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your-supabase-anon-or-service-key
+SUPABASE_KEY=your-supabase-service-role-or-anon-key
+
+# --- Security & JWT ---
+# Use a strong random string (at least 32 characters)
 JWT_SECRET=your-random-32-character-secret-key
-GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+
+# --- Institutional Access (Google Sign-In) ---
+# Web application client ID from Google Cloud Console
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 ALLOWED_EMAIL_DOMAIN=iiitdwd.ac.in
+
+# --- Admin Account ---
+# Credentials used to sign in at /admin/login to approve teachers
 ADMIN_EMAIL=admin@iiitdwd.ac.in
 ADMIN_PASSWORD=choose-a-strong-admin-password
+
+# --- App Settings & CORS ---
+APP_NAME=FaceVPlus API
+APP_ENV=development
+FRONTEND_URL=http://localhost:5173
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000
 ```
 
-#### Step 6: Start the Backend Server
+#### Step 5: Start the Backend Server
+
+From the **project root folder**, run:
+
 ```bash
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
-> **Success Check**: Open your browser to `http://127.0.0.1:8000/docs` to view the interactive API documentation.
+
+> **Success Check**:
+> - Open `http://127.0.0.1:8000/api/health` in your browser. You should receive `{"status": "healthy", ...}`.
+> - Open `http://127.0.0.1:8000/docs` to test endpoints in the interactive Swagger UI.
 
 ---
 
@@ -96,18 +128,21 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 
 Open a **new terminal window** (keep the backend server running in the first terminal).
 
-#### Step 1: Navigate to the frontend directory
+#### Step 1: Navigate to the Frontend Directory
+
 ```bash
 cd frontend
 ```
 
 #### Step 2: Install Node Dependencies
+
 ```bash
 npm install
 ```
 
-#### Step 3: Set Up Environment Variables
-Create a `.env` file inside the `frontend/` folder by copying the template:
+#### Step 3: Configure Frontend Environment Variables
+
+Create a `.env` file inside the `frontend/` folder by copying the example template:
 
 ```bash
 # Windows (PowerShell)
@@ -117,45 +152,92 @@ Copy-Item .env.example .env
 cp .env.example .env
 ```
 
-Ensure `.env` contains:
+Open `frontend/.env` and configure:
+
 ```ini
-VITE_API_URL=http://127.0.0.1:8000
-VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+# In development, Vite automatically proxies /api to http://127.0.0.1:8000
+VITE_API_URL=/api
+VITE_APP_URL=http://localhost:5173
+
+# Must match GOOGLE_CLIENT_ID in backend/.env
+VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 ```
 
 #### Step 4: Start the Frontend Development Server
+
 ```bash
 npm run dev
 ```
-> **Success Check**: Open your browser to `http://localhost:5173` to access the FaceVPlus application portal.
+
+> **Success Check**: Open `http://localhost:5173` in your browser to access the FaceVPlus application.
 
 ---
 
-## Features Summary
+### Phase 4: Database Setup (Supabase PostgreSQL)
 
-### Teacher Portal
-- **Teacher Authentication**: Registration needs an `@iiitdwd.ac.in` Google account and the admin's approval; then password login using bcrypt hashing and JWT tokens.
-- **Join Requests**: Students ask to join a subject; the subject's teacher approves or rejects each request from the **Requests** tab.
-- **Subject Management**: Create, view, and delete courses with real-time student counts.
-- **Dynamic QR & Share Links**: Generate printable QR codes and shareable links (`/student/enroll?code=CS101`) for instant enrollment.
-- **Batch Face Attendance**: Live camera snapshots or photo uploads analyzed simultaneously by Dlib against student facial descriptors.
-- **Acoustic Voice Attendance**: Segment speech recordings using Resemblyzer to identify matching student voiceprints.
-- **Interactive Review & History**: Toggle student statuses before saving logs and export historical attendance records to CSV.
+1. Sign in to your [Supabase Dashboard](https://supabase.com).
+2. Open the **SQL Editor** in your Supabase project.
+3. If setting up or updating verification and college domain columns, copy and execute the script in [`backend/migrations/001_verification.sql`](backend/migrations/001_verification.sql).
+4. Verify the following core tables are present:
+   - **`teachers`**: `teacher_id`, `username`, `password`, `name`, `email`, `status` (`pending` / `approved` / `rejected`).
+   - **`students`**: `student_id`, `name`, `email`, `roll_no`, `status` (`pending` / `approved` / `rejected`), `face_embedding` (128D array), `voice_embedding` (256D array).
+   - **`subjects`**: `subject_id`, `subject_code`, `name`, `section`, `teacher_id`.
+   - **`subject_students`**: `subject_id`, `student_id`, `status` (`pending` / `approved` / `rejected`), `requested_at`.
+   - **`attendance_logs`**: `id`, `timestamp`, `subject_id`, `student_id`, `is_present`.
 
-### Student Portal
-- **Face-ID Authentication**: Live camera facial recognition login against registered 128D descriptors.
-- **College-only Registration**: Sign in with an `@iiitdwd.ac.in` Google account (for example `24bcs086@iiitdwd.ac.in`); the roll number is taken from the email.
-- **Biometric Enrollment**: One-time registration for face snapshots and voice utterances.
-- **Course Management**: Request to join classes via code/QR code. Once the teacher approves, view real-time course attendance percentages.
+---
 
-### Admin Portal
-- **Teacher Approval**: Sign in at `/admin/login` with `ADMIN_EMAIL` / `ADMIN_PASSWORD` to approve or reject new teachers.
+### Phase 5: Google OAuth Setup
 
-### Verification Flow
-1. A teacher registers with a college Google account. The account is **pending** and cannot sign in until the admin approves it.
-2. A student registers with a college Google account plus a face photo. The account is **pending**.
-3. The student requests to join a subject. That subject's teacher approves or rejects the request. The first approval verifies the student's account.
-4. Only approved students appear in rosters and face/voice attendance.
+To enable college-only sign-in:
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
+2. Create or select a project, then configure the OAuth consent screen.
+3. Create Credentials $\to$ **OAuth client ID** $\to$ Application type: **Web application**.
+4. Under **Authorized JavaScript origins**, add:
+   - `http://localhost:5173`
+   - `http://127.0.0.1:5173`
+   *(Plus your production URL if deploying)*
+5. Copy the generated Client ID:
+   - Paste into `backend/.env` as `GOOGLE_CLIENT_ID`
+   - Paste into `frontend/.env` as `VITE_GOOGLE_CLIENT_ID`
+
+---
+
+## Features & Verification Workflow
+
+```text
+[Institutional Google OAuth (@iiitdwd.ac.in)]
+                  │
+        ┌─────────┴─────────┐
+        ▼                   ▼
+[Teacher Registration]  [Student Registration]
+   (Status: Pending)       (Status: Pending + Face Photo)
+        │                   │
+   [Admin Approval]         │ (Teacher shares subject invite / QR)
+        │                   ▼
+   [Teacher Active] ──> [Teacher Approves Subject Join Request]
+                            │
+                       [Student Verified & Enrolled]
+```
+
+### 1. Admin Portal (`/admin/login`)
+- Log in with `ADMIN_EMAIL` and `ADMIN_PASSWORD` from `backend/.env`.
+- Review pending teacher sign-ups, approve legitimate faculty, or reject unauthorized accounts.
+
+### 2. Teacher Portal (`/teacher/login`)
+- Register with institutional `@iiitdwd.ac.in` Google account.
+- Once approved by Admin, create subjects and generate dynamic join codes or QR codes.
+- Review and approve pending student join requests.
+- **Biometric Attendance**:
+  - **Face Recognition**: Upload single/batch classroom photos. Dlib detects faces and matches 128D descriptors against enrolled students.
+  - **Voice Attendance**: Record classroom audio utterances to identify students using 256D Resemblyzer embeddings.
+  - Review, manually adjust, and finalize attendance records.
+
+### 3. Student Portal (`/student/login`)
+- Register with institutional `@iiitdwd.ac.in` Google account and capture a reference face photo.
+- Enroll in courses by entering subject code or scanning teacher-provided QR code.
+- Authenticate via webcam facial recognition for instant login.
+- View real-time subject-wise attendance percentages.
 
 ---
 
@@ -167,6 +249,7 @@ npm run dev
 │   Tailwind CSS • Lucide React • React Router • Axios   │
 └───────────────────────────┬────────────────────────────┘
                             │ REST API (JSON / FormData)
+                            │ (Vite proxy: /api -> :8000)
 ┌───────────────────────────▼────────────────────────────┐
 │                  FastAPI Backend                       │
 │    Uvicorn • Pydantic v2 • PyJWT • Bcrypt Security     │
@@ -182,72 +265,67 @@ npm run dev
 ## Folder Structure
 
 ```text
-facevplus-v2/
+Face-attendance-system/
 ├── backend/                  # FastAPI Backend
 │   ├── app/
-│   │   ├── main.py           # Entrypoint, CORS, route imports
-│   │   ├── core/             # Configuration & security (JWT, Bcrypt)
-│   │   ├── api/              # Route handlers & authentication deps
-│   │   ├── schemas/          # Pydantic request/response models
-│   │   └── services/         # Supabase, Face, and Voice processing logic
-│   ├── requirements.txt      # Backend dependencies
-│   ├── .env.example          # Environment variables template
+│   │   ├── main.py           # Entrypoint, CORS, route registration
+│   │   ├── core/             # Config, security, Google auth
+│   │   ├── api/              # Routes (auth, subjects, attendance, admin)
+│   │   ├── schemas/          # Pydantic data schemas
+│   │   └── services/         # Face & voice processing, Supabase repos
+│   ├── requirements.txt      # Complete backend dependencies
+│   ├── .env.example          # Backend environment template
 │   └── .env                  # Local secret configuration
 ├── frontend/                 # React Frontend
 │   ├── src/
-│   │   ├── App.jsx           # App layout & routing logic
+│   │   ├── App.jsx           # App layout & routing
 │   │   ├── context/          # React AuthContext
-│   │   ├── pages/            # Teacher & Student views
-│   │   └── components/       # UI elements and dialogs
+│   │   ├── pages/            # Admin, Teacher, and Student views
+│   │   └── components/       # Common UI elements, modals, dialogs
 │   ├── package.json          # Node dependencies
-│   ├── vite.config.js        # Vite configuration
+│   ├── vite.config.js        # Vite config with /api proxy
 │   └── .env.example          # Frontend environment template
-├── tests/                    # Backend automated tests
+├── tests/                    # Automated backend tests
+├── requirements.txt          # Root package reference
 └── README.md
 ```
 
 ---
 
-## Database Schema (Supabase PostgreSQL)
-
-Set up the following relational tables in your Supabase SQL Editor:
-
-1. **`teachers`**: `teacher_id` (PK), `username`, `password` (bcrypt hash), `name`, `email` (unique), `status` (`pending` / `approved` / `rejected`).
-2. **`students`**: `student_id` (PK, generated), `name`, `email` (unique), `roll_no`, `status` (`pending` / `approved` / `rejected`), `face_embedding` (128D array), `voice_embedding` (256D array).
-3. **`subjects`**: `subject_id` (PK), `subject_code`, `name`, `section`, `teacher_id` (FK → `teachers`).
-4. **`subject_students`**: `subject_id` (FK), `student_id` (FK), `status` (`pending` / `approved` / `rejected`), `requested_at`.
-5. **`attendance_logs`**: `id` (PK), `timestamp`, `subject_id` (FK), `student_id` (FK), `is_present` (boolean).
-
-**Upgrading an existing database**: run `backend/migrations/001_verification.sql` once in the Supabase SQL Editor. It adds the columns above, marks all existing teachers, students and enrollments as `approved`, and makes every new row `pending`.
-
-### Google Sign-In Setup
-1. In Google Cloud Console, create an OAuth client ID of type **Web application**.
-2. Add `http://localhost:5173` (and your production URL) under **Authorized JavaScript origins**.
-3. Put the client ID in `backend/.env` as `GOOGLE_CLIENT_ID` and in `frontend/.env` as `VITE_GOOGLE_CLIENT_ID`.
-4. The college accounts must be Google Workspace accounts of `iiitdwd.ac.in`. The backend rejects any token without the matching `hd` claim, so personal Gmail accounts cannot register.
-
----
-
 ## Running Backend Tests
 
-To verify that authentication tokens, route handlers, and QR code generations are working properly:
+Run automated tests to verify authentication tokens, route handlers, and QR code generation:
 
-1. Make sure your virtual environment is active in the `backend` folder.
-2. Run pytest:
-   ```bash
-   pytest tests -v
-   ```
+```bash
+# Make sure your virtual environment is active at repository root
+pytest backend/tests -v
+```
 
 ---
 
 ## Troubleshooting & FAQ
 
-- **Camera / Microphone Access Denied**:  
-  Browsers require secure origins (`localhost` or `https://`) for camera/microphone access. Ensure you access the web interface via `http://localhost:5173`.
-- **`pkg_resources` Deprecation Warning**:  
-  This is an upstream warning from `face_recognition_models` and can be safely ignored.
-- **Face Detection Fails**:  
-  Ensure sufficient room lighting and position a single face clearly within the camera frame during registration.
+### `ModuleNotFoundError: No module named 'backend'`
+- **Fix**: Run `uvicorn` from the repository root folder, **not** from inside `backend/`:
+  ```bash
+  uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
+  ```
+
+### PowerShell: `running scripts is disabled on this system`
+- **Fix**: Run this in PowerShell before activating `venv`:
+  ```powershell
+  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+  .\venv\Scripts\Activate.ps1
+  ```
+
+### Camera or Microphone Access Denied
+- Browsers require secure origins (`localhost` or `https://`) for media device permissions. Access the web interface via `http://localhost:5173`.
+
+### Google Sign-in Error: `redirect_uri_mismatch` or Origin Error
+- Ensure `http://localhost:5173` is listed under **Authorized JavaScript origins** in Google Cloud Console OAuth credentials.
+
+### `pkg_resources` Deprecation Warning
+- This is an upstream warning from `face_recognition_models` and `webrtcvad`. It does not affect functionality and can be safely ignored.
 
 ---
 
@@ -260,7 +338,6 @@ Contributions, issues, and feature requests are welcome!
 * **Nikhil Kumar Sinha** — https://github.com/Nikhil-sinhaa
 * **R D** — https://github.com/rd6260
 * **Saksham Kushwah** — https://github.com/shhadowpdf
-* Feel free to open a Pull Request or Issue to contribute to FaceVPlus.
 
 ## License
 
