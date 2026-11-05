@@ -6,6 +6,15 @@ ROOT_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+# Satisfy Hugging Face ZeroGPU requirement if running on ZeroGPU hardware
+try:
+    import spaces
+    @spaces.GPU
+    def _zero_gpu_init():
+        return True
+except Exception:
+    pass
+
 import gradio as gr
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.core.config import settings
@@ -45,7 +54,7 @@ demo.app.add_middleware(
     allow_headers=["*"],
 )
 
-# 4. Launch Gradio with ssr_mode=False to avoid Node.js SSR proxy crashes
+# 4. Launch Gradio with ssr_mode=False
 if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",
