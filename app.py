@@ -7,31 +7,22 @@ ROOT_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-import gradio as gr
+from gradio import Server
 import spaces
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.core.config import settings
 from backend.app.api.routes import auth, subjects, attendance, admin
 
-# 1. ZeroGPU Inference Handler (satisfies Hugging Face ZeroGPU startup scanner)
+# Initialize Gradio Server (inherits directly from FastAPI)
+app = Server(title=settings.APP_NAME)
+
+# Satisfy ZeroGPU requirement with a registered API endpoint
+@app.api(name="ping")
 @spaces.GPU
-def gpu_health_check(query: str):
-    """ZeroGPU check endpoint."""
-    return f"ZeroGPU backend active. Query: {query or 'health'}"
+def ping(text: str = "health") -> str:
+    return f"ZeroGPU API active: {text}"
 
-# 2. Gradio Interface
-demo = gr.Interface(
-    fn=gpu_health_check,
-    inputs=gr.Textbox(label="Test Input", placeholder="Type a message or ping..."),
-    outputs=gr.Textbox(label="Response"),
-    title="👁️ FaceVPlus Attendance System API",
-    description="The REST API is live and operational on Hugging Face Spaces (ZeroGPU Free Tier). Visit `/docs` for interactive API documentation.",
-)
-
-# 3. Register all FastAPI backend routes directly onto Gradio's internal FastAPI app
-app = demo.app
-
-# Enable CORS for Render frontend and local testing
+# Enable wide-open CORS so Render frontend and localhost connect without issues
 cors_origins = settings.get_cors_origins()
 app.add_middleware(
     CORSMiddleware,
@@ -42,7 +33,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register routes under /api
+# Register all REST API routes
 app.include_router(auth.router, prefix="/api")
 app.include_router(subjects.router, prefix="/api")
 app.include_router(subjects.invitation_router, prefix="/api")
@@ -58,8 +49,13 @@ def api_health():
         "supabase_configured": bool(settings.SUPABASE_URL and settings.SUPABASE_KEY),
     }
 
-# 4. Launch Gradio using native launch
+@app.get("/")
+def root_status():
+    return {
+        "message": "FaceVPlus API is running successfully on Hugging Face Spaces!",
+        "health": "/api/health",
+        "docs": "/docs",
+    }
+
 if __name__ == "__main__":
-    demo.launch(
-        ssr_mode=False,
-    )
+    app.launch()
